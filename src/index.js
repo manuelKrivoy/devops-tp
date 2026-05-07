@@ -14,7 +14,7 @@ app.use(express.json({ limit: "10kb" }));
 // Rate limiting global
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Demasiadas solicitudes, intentá de nuevo más tarde." },

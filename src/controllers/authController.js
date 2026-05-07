@@ -21,13 +21,17 @@ async function register(req, res) {
     return res.status(400).json({ error: "La contraseña debe tener entre 8 y 128 caracteres" });
   }
 
+  if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 120) {
+    return res.status(400).json({ error: "El nombre debe tener entre 2 y 120 caracteres" });
+  }
+
   if (users.has(email.toLowerCase())) {
     return res.status(409).json({ error: "El email ya está registrado" });
   }
 
   const hashedPassword = await bcrypt.hash(password, config.bcryptRounds);
   const id = uuidv4();
-  const user = { id, email: email.toLowerCase(), name, password: hashedPassword };
+  const user = { id, email: email.toLowerCase(), name: name.trim(), password: hashedPassword };
   users.set(user.email, user);
 
   const token = generateToken(user);
@@ -44,6 +48,10 @@ async function login(req, res) {
 
   if (!email || !password) {
     return res.status(400).json({ error: "Se requieren email y password" });
+  }
+
+  if (typeof email !== "string" || typeof password !== "string") {
+    return res.status(400).json({ error: "Email o contraseña inválidos" });
   }
 
   const user = users.get(email.toLowerCase());

@@ -29,7 +29,15 @@ function createBook(req, res) {
     return res.status(400).json({ error: "Título inválido" });
   }
 
+  if (title.trim().length === 0) {
+    return res.status(400).json({ error: "Título inválido" });
+  }
+
   if (typeof author !== "string" || author.length > 300) {
+    return res.status(400).json({ error: "Autor inválido" });
+  }
+
+  if (author.trim().length === 0) {
     return res.status(400).json({ error: "Autor inválido" });
   }
 
@@ -42,7 +50,7 @@ function createBook(req, res) {
     id,
     title: title.trim(),
     author: author.trim(),
-    year: year || null,
+    year: year ?? null,
     genre: typeof genre === "string" ? genre.trim() : null,
     isbn: typeof isbn === "string" ? isbn.trim() : null,
     createdBy: req.user.id,
@@ -70,6 +78,11 @@ function updateBook(req, res) {
     if (typeof title !== "string" || title.length > 500) {
       return res.status(400).json({ error: "Título inválido" });
     }
+
+    if (title.trim().length === 0) {
+      return res.status(400).json({ error: "Título inválido" });
+    }
+
     book.title = title.trim();
   }
 
@@ -77,6 +90,11 @@ function updateBook(req, res) {
     if (typeof author !== "string" || author.length > 300) {
       return res.status(400).json({ error: "Autor inválido" });
     }
+
+    if (author.trim().length === 0) {
+      return res.status(400).json({ error: "Autor inválido" });
+    }
+
     book.author = author.trim();
   }
 
