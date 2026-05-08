@@ -39,7 +39,7 @@ API REST de biblioteca de libros construida con **Express.js**, autenticación *
 
 ### Requisitos previos en Windows
 
-- Docker Desktop instalado y levantado 
+- Docker Desktop instalado y levantado
 
 ### Docker
 
@@ -63,20 +63,6 @@ docker compose up --build -d
 # Detener y eliminar el contenedor
 docker compose down
 ```
-
-## Paso a paso con Docker
-
-1. Abrir Docker Desktop y esperar a que el motor de Docker quede activo.
-2. Ejecutar `docker build -t book-library-api .`.
-   Este comando construye la imagen de la aplicación usando el `Dockerfile` del proyecto.
-3. Ejecutar `docker run --name book-library-api -p 3000:3000 -e JWT_SECRET=tu_secreto_seguro book-library-api`.
-   Este comando crea y levanta un contenedor llamado `book-library-api`, publica el puerto `3000` del contenedor en el puerto `3000` de tu máquina y define la variable de entorno `JWT_SECRET`.
-4. Abrir `http://localhost:3000/api/health` en el navegador o probarlo con `curl`.
-   Si todo está bien, la API responde con un JSON con `status: ok`.
-5. Ejecutar `docker stop book-library-api` cuando quieras detener la API.
-   Este comando apaga el contenedor sin borrar la imagen.
-6. Ejecutar `docker rm book-library-api` si querés eliminar el contenedor detenido.
-   Esto limpia el contenedor creado anteriormente, pero no elimina la imagen.
 
 ## Paso a paso con Docker Compose
 
@@ -102,12 +88,12 @@ docker compose down
 
 ## Variables de entorno
 
-| Variable         | Descripción                    | Default                         |
-| ---------------- | ------------------------------ | ------------------------------- |
-| `PORT`           | Puerto del servidor            | `3000`                          |
-| `JWT_SECRET`     | Secreto para firmar tokens JWT | Auto-generado (no usar en prod) |
-| `JWT_EXPIRES_IN` | Tiempo de expiración del token | `1h`                            |
-| `IMAGE_NAME`     | Nombre/tag de imagen para Compose | `book-library-api:local`     |
+| Variable         | Descripción                       | Default                         |
+| ---------------- | --------------------------------- | ------------------------------- |
+| `PORT`           | Puerto del servidor               | `3000`                          |
+| `JWT_SECRET`     | Secreto para firmar tokens JWT    | Auto-generado (no usar en prod) |
+| `JWT_EXPIRES_IN` | Tiempo de expiración del token    | `1h`                            |
+| `IMAGE_NAME`     | Nombre/tag de imagen para Compose | `book-library-api:local`        |
 
 > **Importante:** En producción, siempre definí `JWT_SECRET` con un valor seguro. Podés generar uno con `openssl rand -hex 32`.
 
@@ -229,29 +215,13 @@ curl -X DELETE http://localhost:3000/api/books/<id-del-libro> \
 
 - `npm test`: ejecuta las pruebas del health check, login inválido y flujo básico de auth/CRUD.
 
-## Publicación de imagen Docker
+## Descargar imagen publicada en Docker Hub
 
-Podés publicar la imagen en cualquier registry compatible con Docker, por ejemplo Docker Hub o GHCR.
+- `docker pull manukrivoy/book-library-api:latest `: descarga la imagen publicada en Docker Hub. Luego, podés ejecutar un contenedor con esta imagen usando el comando `docker run` o `docker compose` como se muestra en la sección de uso.
 
-```bash
-# Construir la imagen con nombre/tag final
-docker build -t <usuario-o-org>/book-library-api:latest .
-
-# Iniciar sesión en el registry
-docker login
-
-# Publicar la imagen
-docker push <usuario-o-org>/book-library-api:latest
-```
-
-Si usás Docker Compose, también podés definir el nombre de imagen con `IMAGE_NAME`:
-
-```bash
-$env:IMAGE_NAME="<usuario-o-org>/book-library-api:latest"
-docker compose build
-docker push <usuario-o-org>/book-library-api:latest
 ```
 
 ## Notas
 
 - Los datos se almacenan en memoria. Al reiniciar el servidor se pierden. Para producción, conectar una base de datos (PostgreSQL, MongoDB, etc.).
+```
