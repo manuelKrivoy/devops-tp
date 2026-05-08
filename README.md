@@ -37,9 +37,9 @@ API REST de biblioteca de libros construida con **Express.js**, autenticación *
 
 ## Uso
 
-### Requisitos previos
+### Requisitos previos en Windows
 
-- Docker Desktop instalado y levantado
+- Docker Desktop instalado y levantado 
 
 ### Docker
 
