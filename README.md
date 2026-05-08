@@ -10,6 +10,7 @@ API REST de biblioteca de libros construida con **Express.js**, autenticación *
 - **Helmet** para cabeceras HTTP seguras
 - **express-rate-limit** para protección contra abuso
 - **Docker** con multi-stage build
+- **Docker Compose** para levantar la API localmente
 
 ## Estructura del proyecto
 
@@ -27,6 +28,7 @@ API REST de biblioteca de libros construida con **Express.js**, autenticación *
 │   │   └── books.js              # Rutas de libros
 │   └── index.js                  # Entry point del servidor
 ├── Dockerfile                    # Imagen Docker multi-stage
+├── docker-compose.yml            # Orquestación local con Docker Compose
 ├── .dockerignore                 # Archivos excluidos del build de Docker
 ├── .env.example                  # Variables de entorno de ejemplo
 ├── .gitignore
@@ -49,6 +51,19 @@ docker build -t book-library-api .
 docker run --name book-library-api -p 3000:3000 -e JWT_SECRET=tu_secreto_seguro book-library-api
 ```
 
+### Docker Compose
+
+```bash
+# Levantar la API con Docker Compose
+docker compose up --build
+
+# Levantarla en segundo plano
+docker compose up --build -d
+
+# Detener y eliminar el contenedor
+docker compose down
+```
+
 ## Paso a paso con Docker
 
 1. Abrir Docker Desktop y esperar a que el motor de Docker quede activo.
@@ -63,10 +78,26 @@ docker run --name book-library-api -p 3000:3000 -e JWT_SECRET=tu_secreto_seguro 
 6. Ejecutar `docker rm book-library-api` si querés eliminar el contenedor detenido.
    Esto limpia el contenedor creado anteriormente, pero no elimina la imagen.
 
+## Paso a paso con Docker Compose
+
+1. Copiar `.env.example` a `.env` si querés definir valores propios para `JWT_SECRET` y otras variables.
+2. Ejecutar `docker compose up --build`.
+   Este comando construye la imagen y levanta el servicio `api` definido en `docker-compose.yml`.
+3. Abrir `http://localhost:3000/api/health` en el navegador o probarlo con `curl`.
+4. Ejecutar `docker compose down` cuando quieras detener y eliminar el contenedor.
+
 ## Verificación rápida
 
 ```bash
 curl http://localhost:3000/api/health
+```
+
+Con Docker Compose:
+
+```bash
+docker compose up --build -d
+curl http://localhost:3000/api/health
+docker compose down
 ```
 
 ## Variables de entorno
@@ -76,6 +107,7 @@ curl http://localhost:3000/api/health
 | `PORT`           | Puerto del servidor            | `3000`                          |
 | `JWT_SECRET`     | Secreto para firmar tokens JWT | Auto-generado (no usar en prod) |
 | `JWT_EXPIRES_IN` | Tiempo de expiración del token | `1h`                            |
+| `IMAGE_NAME`     | Nombre/tag de imagen para Compose | `book-library-api:local`     |
 
 > **Importante:** En producción, siempre definí `JWT_SECRET` con un valor seguro. Podés generar uno con `openssl rand -hex 32`.
 
@@ -187,7 +219,7 @@ curl -X DELETE http://localhost:3000/api/books/<id-del-libro> \
 - **Autenticación JWT**: Las rutas protegidas requieren un token `Bearer` en el header `Authorization`.
 - **Hasheo de contraseñas**: bcrypt con 12 salt rounds.
 - **Helmet**: Configura cabeceras HTTP de seguridad (X-Content-Type-Options, Strict-Transport-Security, etc.).
-- **Rate limiting**: Máximo 100 requests por IP cada 15 minutos.
+- **Rate limiting**: Máximo 20 requests por IP cada 15 minutos.
 - **Validación de inputs**: Se validan tipos, longitudes y formatos en cada endpoint.
 - **Control de acceso**: Solo el creador de un libro puede editarlo o eliminarlo.
 - **Body size limit**: Máximo 10kb por request.
@@ -196,6 +228,29 @@ curl -X DELETE http://localhost:3000/api/books/<id-del-libro> \
 ## Testing
 
 - `npm test`: ejecuta las pruebas del health check, login inválido y flujo básico de auth/CRUD.
+
+## Publicación de imagen Docker
+
+Podés publicar la imagen en cualquier registry compatible con Docker, por ejemplo Docker Hub o GHCR.
+
+```bash
+# Construir la imagen con nombre/tag final
+docker build -t <usuario-o-org>/book-library-api:latest .
+
+# Iniciar sesión en el registry
+docker login
+
+# Publicar la imagen
+docker push <usuario-o-org>/book-library-api:latest
+```
+
+Si usás Docker Compose, también podés definir el nombre de imagen con `IMAGE_NAME`:
+
+```bash
+$env:IMAGE_NAME="<usuario-o-org>/book-library-api:latest"
+docker compose build
+docker push <usuario-o-org>/book-library-api:latest
+```
 
 ## Notas
 

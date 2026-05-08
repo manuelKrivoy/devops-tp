@@ -1,0 +1,13 @@
+services:
+  api:
+    build:
+      context: .
+    image: ${IMAGE_NAME:-book-library-api:local}
+    container_name: book-library-api
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-tu_secreto_super_seguro_aqui}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+    restart: unless-stopped
