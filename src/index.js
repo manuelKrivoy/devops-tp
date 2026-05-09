@@ -22,6 +22,9 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // --- Rutas ---
+app.get("/", (_req, res) => {
+  res.json({ status: "Bienvenido/a" });
+});
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });

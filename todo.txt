@@ -1,6 +1,3 @@
-en los workflows tengo q crear la imagen en Docker hub
 
-
-postear api en render el post debe ser de la Docker image
 
 usar datadog
