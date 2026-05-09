@@ -1,2 +1,3 @@
-postear api en render
+postear api en render el post debe ser de la Docker image
+
 usar datadog
