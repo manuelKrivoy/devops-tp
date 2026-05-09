@@ -12,7 +12,7 @@ jobs:
       contents: read
 
     env:
-      IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY }}
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY }}
 
     steps:
       - name: Checkout repository
