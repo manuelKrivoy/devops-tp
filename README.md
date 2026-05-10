@@ -1,101 +1,250 @@
 # Book Library API
 
-API REST de biblioteca de libros construida con **Express.js**, autenticación **JWT** y containerizada con **Docker**.
+Trabajo practico para la materia **DevOps** de la **Universidad de Palermo (UP)**. El proyecto consiste en una **API REST** para gestion de libros, con **CI/CD automatizado**, **dockerizacion**, publicacion de imagen Docker y **deploy en Render** usando **GitHub Actions**.
 
-## Tecnologías
+## Objetivo del TP
+
+Este TP busca mostrar un flujo DevOps completo sobre una aplicacion Node.js:
+
+- desarrollo de una API REST
+- ejecucion automatica de pruebas con GitHub Actions
+- construccion de una imagen Docker
+- publicacion de la imagen en Docker Hub
+- despliegue automatico en Render
+
+## Tecnologias
 
 - **Node.js 20** + **Express 4**
-- **JWT** (jsonwebtoken) para autenticación
-- **bcrypt** para hasheo de contraseñas
+- **JWT** para autenticacion
+- **bcrypt** para hasheo de contrasenas
 - **Helmet** para cabeceras HTTP seguras
-- **express-rate-limit** para protección contra abuso
+- **express-rate-limit** para proteccion contra abuso
 - **Docker** con multi-stage build
-- **Docker Compose** para levantar la API localmente
+- **Docker Compose** para entorno local
+- **GitHub Actions** para CI/CD
+- **Render** para despliegue
+
+## Docker y CI/CD
+
+### Para que sirve Docker
+
+Docker permite empaquetar la aplicacion con sus dependencias en un contenedor reproducible. Esto evita diferencias entre entornos y hace mas simple correr la API localmente, en CI y en produccion.
+
+### Que hace el Dockerfile y para que se usa
+
+El archivo `Dockerfile` define como construir la imagen de la aplicacion.
+
+En este proyecto:
+
+- usa una build multi-stage
+- instala dependencias con `npm ci --omit=dev`
+- copia solo lo necesario a la imagen final
+- ejecuta la app con un usuario no root
+- expone el puerto `3000`
+
+Se usa para generar una imagen liviana, segura y lista para ejecutarse en cualquier entorno compatible con Docker.
+
+### Para que sirve Docker Compose y para que usarlo localmente
+
+El archivo `docker-compose.yml` sirve para levantar la API en local de forma simple y consistente.
+
+En este proyecto se usa para:
+
+- construir la imagen localmente
+- correr el contenedor con el puerto `3000:3000`
+- inyectar variables de entorno desde `.env`
+- facilitar pruebas y validaciones sin instalar Node.js directamente en la maquina
+
+Uso local:
+
+```bash
+docker compose up --build
+```
+
+Para detenerlo:
+
+```bash
+docker compose down
+```
+
+### Para que sirve el workflow de Docker
+
+El workflow `docker-publish.yml` automatiza el flujo de entrega continua cuando hay un `push` a `master`.
+
+Ese workflow:
+
+- hace checkout del repositorio
+- configura Docker Buildx
+- inicia sesion en Docker Hub
+- genera metadatos y tags de imagen
+- construye y publica la imagen Docker
+- dispara el deploy en Render mediante un deploy hook
+
+## Workflows definidos
+
+El proyecto tiene dos workflows en `.github/workflows`.
+
+### 1. `node.js.yml`
+
+Nombre del workflow: `Node.js CI`
+
+Se ejecuta en:
+
+- `push` a `master`
+- `pull_request` contra `master`
+
+Su objetivo es validar calidad basica del proyecto. Hace lo siguiente:
+
+- descarga el codigo
+- configura Node.js en versiones `18.x`, `20.x` y `22.x`
+- instala dependencias con `npm ci`
+- ejecuta `npm run build --if-present`
+- ejecuta `npm test`
+
+Este workflow corresponde al proceso de **CI**.
+
+### 2. `docker-publish.yml`
+
+Nombre del workflow: `Publish Docker Image`
+
+Se ejecuta en:
+
+- `push` a `master`
+
+Su objetivo es automatizar la entrega y despliegue. Hace lo siguiente:
+
+- construye la imagen Docker de la API
+- la publica en Docker Hub con tags como `latest` y el SHA del commit
+- llama al deploy hook de Render para actualizar la aplicacion desplegada
+
+Este workflow cubre la parte de **CD** del proyecto.
 
 ## Estructura del proyecto
 
-```
+```text
+.
+├── .github/
+│   └── workflows/
+│       ├── docker-publish.yml      # Build, push a Docker Hub y deploy en Render
+│       └── node.js.yml             # CI con instalacion, build y tests
 ├── src/
 │   ├── config/
-│   │   └── index.js              # Configuración (puerto, JWT secret, bcrypt rounds)
+│   │   └── index.js                # Configuracion general de la app
 │   ├── controllers/
-│   │   ├── authController.js     # Lógica de registro y login
-│   │   └── bookController.js     # CRUD de libros
+│   │   ├── authController.js       # Registro y login
+│   │   └── bookController.js       # Operaciones CRUD de libros
 │   ├── middleware/
-│   │   └── auth.js               # Middleware de autenticación JWT
+│   │   └── auth.js                 # Middleware JWT
 │   ├── routes/
-│   │   ├── auth.js               # Rutas de autenticación
-│   │   └── books.js              # Rutas de libros
-│   └── index.js                  # Entry point del servidor
-├── Dockerfile                    # Imagen Docker multi-stage
-├── docker-compose.yml            # Orquestación local con Docker Compose
-├── .dockerignore                 # Archivos excluidos del build de Docker
-├── .env.example                  # Variables de entorno de ejemplo
-├── .gitignore
-└── package.json
-```
-
-## Uso
-
-### Requisitos previos en Windows
-
-- Docker Desktop instalado y levantado
-
-### Docker
-
-```bash
-# Construir la imagen Docker de la API
-docker build -t book-library-api .
-
-# Ejecutar un contenedor a partir de la imagen
-docker run --name book-library-api -p 3000:3000 -e JWT_SECRET=tu_secreto_seguro book-library-api
-```
-
-### Docker Compose
-
-```bash
-# Levantar la API con Docker Compose
-docker compose up --build
-
-# Levantarla en segundo plano
-docker compose up --build -d
-
-# Detener y eliminar el contenedor
-docker compose down
-```
-
-## Paso a paso con Docker Compose
-
-1. Copiar `.env.example` a `.env` si querés definir valores propios para `JWT_SECRET` y otras variables.
-2. Ejecutar `docker compose up --build`.
-   Este comando construye la imagen y levanta el servicio `api` definido en `docker-compose.yml`.
-3. Abrir `http://localhost:3000/api/health` en el navegador o probarlo con `curl`.
-4. Ejecutar `docker compose down` cuando quieras detener y eliminar el contenedor.
-
-## Verificación rápida
-
-```bash
-curl http://localhost:3000/api/health
-```
-
-Con Docker Compose:
-
-```bash
-docker compose up --build -d
-curl http://localhost:3000/api/health
-docker compose down
+│   │   ├── auth.js                 # Rutas de autenticacion
+│   │   └── books.js                # Rutas de libros
+│   └── index.js                    # Punto de entrada del servidor
+├── .dockerignore                   # Archivos excluidos del build
+├── .env                            # Variables locales
+├── .env_example                    # Ejemplo de variables de entorno
+├── Dockerfile                      # Definicion de la imagen Docker
+├── docker-compose.yml              # Ejecucion local con Docker Compose
+├── package.json
+└── README.md
 ```
 
 ## Variables de entorno
 
-| Variable         | Descripción                       | Default                         |
-| ---------------- | --------------------------------- | ------------------------------- |
-| `PORT`           | Puerto del servidor               | `3000`                          |
-| `JWT_SECRET`     | Secreto para firmar tokens JWT    | Auto-generado (no usar en prod) |
-| `JWT_EXPIRES_IN` | Tiempo de expiración del token    | `1h`                            |
-| `IMAGE_NAME`     | Nombre/tag de imagen para Compose | `book-library-api:local`        |
+### Variables locales en `.env`
 
-> **Importante:** En producción, siempre definí `JWT_SECRET` con un valor seguro. Podés generar uno con `openssl rand -hex 32`.
+Para correr el proyecto localmente o con Docker Compose se usan variables en el archivo `.env`.
+
+Variables actuales:
+
+| Variable | Descripcion | Valor por defecto |
+| --- | --- | --- |
+| `PORT` | Puerto donde corre la API | `3000` |
+| `JWT_SECRET` | Secreto para firmar tokens JWT | si no existe, la app genera uno aleatorio |
+| `JWT_EXPIRES_IN` | Tiempo de expiracion del token | `1h` |
+
+Ejemplo:
+
+```env
+PORT=3000
+JWT_SECRET=tu_secreto_super_seguro_aqui
+JWT_EXPIRES_IN=1h
+```
+
+### Variables en GitHub Actions
+
+Para que los workflows funcionen en GitHub hay que definir variables y secretos en el repositorio.
+
+Secrets necesarios:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+- `RENDER_DEPLOY_HOOK_URL`
+
+Repository variable necesaria:
+
+- `DOCKERHUB_REPOSITORY`
+
+En el workflow `docker-publish.yml` se arma el nombre final de la imagen asi:
+
+```text
+${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY }}
+```
+
+### Diferencias entre `.env` y variables de GitHub
+
+`.env`:
+
+- se usa en ejecucion local
+- lo consume la aplicacion o Docker Compose
+- define configuracion funcional de la API, como puerto y JWT
+
+GitHub Actions variables/secrets:
+
+- se usan solo durante los workflows de CI/CD
+- permiten autenticarse contra servicios externos
+- no configuran el comportamiento interno de la API local, sino el pipeline automatizado
+
+Diferencia clave:
+
+- `.env` configura la **aplicacion**
+- `Secrets` y `Variables` de GitHub configuran el **pipeline**
+
+## Uso local
+
+### Requisitos previos
+
+- Docker Desktop instalado y en ejecucion
+
+### Con Docker
+
+```bash
+docker build -t book-library-api .
+docker run --name book-library-api -p 3000:3000 -e JWT_SECRET=tu_secreto_seguro book-library-api
+```
+
+### Con Docker Compose
+
+```bash
+docker compose up --build
+```
+
+En segundo plano:
+
+```bash
+docker compose up --build -d
+```
+
+Detener contenedores:
+
+```bash
+docker compose down
+```
+
+## Verificacion rapida
+
+```bash
+curl http://localhost:3000/api/health
+```
 
 ## Endpoints
 
@@ -202,26 +351,24 @@ curl -X DELETE http://localhost:3000/api/books/<id-del-libro> \
 
 ## Seguridad
 
-- **Autenticación JWT**: Las rutas protegidas requieren un token `Bearer` en el header `Authorization`.
-- **Hasheo de contraseñas**: bcrypt con 12 salt rounds.
-- **Helmet**: Configura cabeceras HTTP de seguridad (X-Content-Type-Options, Strict-Transport-Security, etc.).
-- **Rate limiting**: Máximo 20 requests por IP cada 15 minutos.
-- **Validación de inputs**: Se validan tipos, longitudes y formatos en cada endpoint.
-- **Control de acceso**: Solo el creador de un libro puede editarlo o eliminarlo.
-- **Body size limit**: Máximo 10kb por request.
-- **Docker seguro**: Multi-stage build con usuario sin privilegios (no root).
+- autenticacion JWT en rutas protegidas
+- hasheo de contrasenas con bcrypt
+- uso de `helmet` para headers seguros
+- rate limiting global
+- limite de tamano de body
+- control de acceso sobre libros creados por usuario
+- contenedor ejecutado con usuario no root
 
 ## Testing
 
-- `npm test`: ejecuta las pruebas del health check, login inválido y flujo básico de auth/CRUD.
+- `npm test`: ejecuta las pruebas automatizadas del proyecto
 
-## Descargar imagen publicada en Docker Hub
+## Imagen publicada
 
-- `docker pull manukrivoy/book-library-api:latest `: descarga la imagen publicada en Docker Hub. Luego, podés ejecutar un contenedor con esta imagen usando el comando `docker run` o `docker compose` como se muestra en la sección de uso.
-
+```bash
+docker pull manukrivoy/book-library-api:latest
 ```
 
-## Notas
+## Nota
 
-- Los datos se almacenan en memoria. Al reiniciar el servidor se pierden. Para producción, conectar una base de datos (PostgreSQL, MongoDB, etc.).
-```
+- Los datos se almacenan en memoria. Al reiniciar el servidor se pierden.
