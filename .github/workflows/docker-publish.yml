@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "v*.*.*"
 
 jobs:
   docker:
@@ -12,7 +14,7 @@ jobs:
       contents: read
 
     env:
-      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY }}
+      IMAGE_NAME: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY }}
 
     steps:
       - name: Checkout repository
@@ -33,8 +35,9 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest
-            type=sha,prefix=
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -46,5 +49,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Deploy to Render
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-          
+        run: |
+          IMAGE_URL="${IMAGE_NAME}:sha-${GITHUB_SHA::7}"
+          ENCODED_IMAGE_URL=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$IMAGE_URL', safe=''))")
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}&imgURL=${ENCODED_IMAGE_URL}"
