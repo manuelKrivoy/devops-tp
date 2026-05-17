@@ -10,4 +10,7 @@ services:
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-tu_secreto_super_seguro_aqui}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-local}
     restart: unless-stopped
