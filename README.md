@@ -23,6 +23,7 @@ Este TP busca mostrar un flujo DevOps completo sobre una aplicacion Node.js:
 - **Docker Compose** para entorno local
 - **GitHub Actions** para CI/CD
 - **Render** para despliegue
+- **Sentry** para monitoreo de errores y respuestas exitosas
 
 ## Docker y CI/CD
 
@@ -129,7 +130,8 @@ Este workflow cubre la parte de **CD** del proyecto.
 │       └── node.js.yml             # CI con instalacion, build y tests
 ├── src/
 │   ├── config/
-│   │   └── index.js                # Configuracion general de la app
+│   │   ├── index.js                # Configuracion general de la app
+│   │   └── instrument.js           # Inicializacion de Sentry
 │   ├── controllers/
 │   │   ├── authController.js       # Registro y login
 │   │   └── bookController.js       # Operaciones CRUD de libros
@@ -161,6 +163,10 @@ Variables actuales:
 | `PORT` | Puerto donde corre la API | `3000` |
 | `JWT_SECRET` | Secreto para firmar tokens JWT | si no existe, la app genera uno aleatorio |
 | `JWT_EXPIRES_IN` | Tiempo de expiracion del token | `1h` |
+| `SENTRY_DSN` | DSN del proyecto en Sentry. Si esta vacio, Sentry queda deshabilitado | vacio |
+| `SENTRY_ENVIRONMENT` | Ambiente reportado a Sentry | `NODE_ENV` o `production` |
+| `SENTRY_RELEASE` | Version/release reportada a Sentry | `RENDER_GIT_COMMIT` o `dev` |
+| `SENTRY_TRACES_SAMPLE_RATE` | Porcentaje de trazas enviadas a Sentry | `1` |
 
 Ejemplo:
 
@@ -168,6 +174,10 @@ Ejemplo:
 PORT=3000
 JWT_SECRET=tu_secreto_super_seguro_aqui
 JWT_EXPIRES_IN=1h
+SENTRY_DSN=
+SENTRY_ENVIRONMENT=development
+SENTRY_RELEASE=dev
+SENTRY_TRACES_SAMPLE_RATE=1
 ```
 
 ### Variables en GitHub Actions
@@ -358,6 +368,50 @@ curl -X DELETE http://localhost:3000/api/books/<id-del-libro> \
 - limite de tamano de body
 - control de acceso sobre libros creados por usuario
 - contenedor ejecutado con usuario no root
+
+## Monitoreo
+
+El proyecto usa **Sentry** para observar el comportamiento de la API en produccion y facilitar el diagnostico de fallas.
+
+### Como se implemento
+
+- `src/config/instrument.js` inicializa Sentry antes de crear la app Express.
+- La inicializacion usa `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` y `SENTRY_TRACES_SAMPLE_RATE`.
+- Si `SENTRY_DSN` no esta definido, Sentry queda deshabilitado y la API funciona normalmente.
+- El error handler global captura excepciones con `Sentry.captureException(err)`.
+- Un middleware global escucha el evento `finish` de cada respuesta HTTP y registra en Sentry los status exitosos `2xx` con nivel `info`.
+
+### Que registra
+
+Para errores:
+
+- excepcion capturada
+- metodo HTTP
+- path solicitado
+- parametros y query string
+- body recibido por la API
+
+Para respuestas exitosas:
+
+- mensaje `Successful HTTP response: <METODO> <RUTA> <STATUS>`
+- nivel `info`
+- metodo HTTP
+- status code
+- path solicitado
+- parametros y query string
+
+Esto permite ver tanto trafico con error, por ejemplo `GET /api/traffic/error`, como trafico exitoso, por ejemplo `GET /api/health` o cualquier endpoint que responda `2xx`.
+
+### Como probarlo
+
+Con un `SENTRY_DSN` valido configurado en el entorno, levantar la API y ejecutar:
+
+```bash
+curl http://localhost:3000/api/health
+curl http://localhost:3000/api/traffic/error
+```
+
+En Sentry deberia verse un evento `info` para la respuesta exitosa y un evento de error para la excepcion simulada.
 
 ## Testing
 

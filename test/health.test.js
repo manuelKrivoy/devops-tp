@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const { randomUUID } = require("node:crypto");
+const Sentry = require("@sentry/node");
 const app = require("../src/index");
 
 function listen(appInstance) {
@@ -90,6 +91,26 @@ test("GET /api/health returns ok", async () => {
     assert.equal(payload.status, "ok");
     assert.match(payload.timestamp, /^\d{4}-\d{2}-\d{2}T/);
   } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("captures successful responses in Sentry", async () => {
+  const server = await listen(app);
+  const originalCaptureMessage = Sentry.captureMessage;
+  const messages = [];
+
+  Sentry.captureMessage = (message) => {
+    messages.push(message);
+  };
+
+  try {
+    const response = await request(server, "/api/health");
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(messages, ["Successful HTTP response: GET /api/health 200"]);
+  } finally {
+    Sentry.captureMessage = originalCaptureMessage;
     await new Promise((resolve) => server.close(resolve));
   }
 });

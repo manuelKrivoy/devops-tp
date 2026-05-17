@@ -49,6 +49,34 @@ const app = express();
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return;
+    }
+
+    Sentry.withScope((scope) => {
+      scope.setLevel("info");
+      scope.setTag("layer", "express");
+      scope.setTag("http.method", req.method);
+      scope.setTag("http.status_code", String(res.statusCode));
+      scope.setContext("request", {
+        method: req.method,
+        path: req.originalUrl,
+        params: req.params,
+        query: req.query,
+      });
+      scope.setContext("response", {
+        statusCode: res.statusCode,
+      });
+
+      Sentry.captureMessage(`Successful HTTP response: ${req.method} ${req.originalUrl} ${res.statusCode}`);
+    });
+  });
+
+  next();
+});
+
 // Rate limiting global
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
