@@ -66,15 +66,6 @@ app.get("/", (_req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
-app.get("/test-sentry", async (_req, res) => {
-  const Sentry = require("./instrument");
-
-  Sentry.captureException(new Error("Manual test error"));
-
-  await Sentry.flush(2000);
-
-  res.send("sent");
-});
 app.get("/api/traffic/error", (_req, _res, next) => {
   next(new Error("Simulated Sentry traffic error"));
 });
