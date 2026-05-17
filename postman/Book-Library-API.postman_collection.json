@@ -49,19 +49,19 @@
       "name": "Traffic",
       "item": [
         {
-          "name": "Failure Traffic",
+          "name": "Error Traffic",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/traffic/failure",
+              "raw": "{{baseUrl}}/api/traffic/error",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "traffic",
-                "failure"
+                "error"
               ]
             }
           }

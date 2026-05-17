@@ -94,11 +94,11 @@ test("GET /api/health returns ok", async () => {
   }
 });
 
-test("GET /api/traffic/failure returns 500", async () => {
+test("GET /api/traffic/error returns 500", async () => {
   const server = await listen(app);
 
   try {
-    const response = await request(server, "/api/traffic/failure");
+    const response = await request(server, "/api/traffic/error");
     assert.equal(response.statusCode, 500);
     assert.equal(JSON.parse(response.body).error, "Error interno del servidor");
   } finally {

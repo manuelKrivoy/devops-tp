@@ -65,8 +65,8 @@ app.get("/", (_req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
-app.get("/api/traffic/error", function mainHandler(req, res) {
-  throw new Error("My first Sentry error!");
+app.get("/api/traffic/error", (_req, _res, next) => {
+  next(new Error("Simulated Sentry traffic error"));
 });
 app.get("/api/traffic/external-book", async (req, res, next) => {
   const title = typeof req.query.title === "string" && req.query.title.trim()
