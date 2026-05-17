@@ -4,6 +4,7 @@ const https = require("node:https");
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const Sentry = require("@sentry/node");
 const config = require("./config");
 const authRoutes = require("./routes/auth");
 const bookRoutes = require("./routes/books");
@@ -104,7 +105,19 @@ app.use((_req, res) => {
 });
 
 // Error handler global
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
+  Sentry.withScope((scope) => {
+    scope.setTag("layer", "express");
+    scope.setContext("request", {
+      method: req.method,
+      path: req.originalUrl,
+      params: req.params,
+      query: req.query,
+      body: req.body,
+    });
+    Sentry.captureException(err);
+  });
+
   console.error(err.stack);
   res.status(500).json({ error: "Error interno del servidor" });
 });
