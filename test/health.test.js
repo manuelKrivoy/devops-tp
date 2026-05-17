@@ -94,6 +94,18 @@ test("GET /api/health returns ok", async () => {
   }
 });
 
+test("GET /api/traffic/failure returns 500", async () => {
+  const server = await listen(app);
+
+  try {
+    const response = await request(server, "/api/traffic/failure");
+    assert.equal(response.statusCode, 500);
+    assert.equal(JSON.parse(response.body).error, "Error interno del servidor");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("rejects malformed login payloads with 400", async () => {
   const server = await listen(app);
 

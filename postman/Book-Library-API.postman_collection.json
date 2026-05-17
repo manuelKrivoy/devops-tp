@@ -46,6 +46,53 @@
       ]
     },
     {
+      "name": "Traffic",
+      "item": [
+        {
+          "name": "Failure Traffic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/traffic/failure",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "traffic",
+                "failure"
+              ]
+            }
+          }
+        },
+        {
+          "name": "External Book Traffic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/traffic/external-book?title=Dune",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "traffic",
+                "external-book"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Dune"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {

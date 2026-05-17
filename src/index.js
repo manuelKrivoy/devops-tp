@@ -1,11 +1,46 @@
 require("./config/tracer");
 
+const https = require("node:https");
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const config = require("./config");
 const authRoutes = require("./routes/auth");
 const bookRoutes = require("./routes/books");
+
+function getJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      {
+        headers: {
+          "User-Agent": "book-library-api/1.0",
+        },
+      },
+      (res) => {
+        let body = "";
+
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+        res.on("end", () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            return reject(new Error(`External API responded with status ${res.statusCode}`));
+          }
+
+          try {
+            resolve(JSON.parse(body));
+          } catch {
+            reject(new Error("External API returned invalid JSON"));
+          }
+        });
+      },
+    );
+
+    req.on("error", reject);
+  });
+}
 
 const app = express();
 
@@ -29,6 +64,35 @@ app.get("/", (_req, res) => {
 });
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+app.get("/api/traffic/failure", (_req, _res, next) => {
+  next(new Error("Simulated Datadog traffic failure"));
+});
+app.get("/api/traffic/external-book", async (req, res, next) => {
+  const title = typeof req.query.title === "string" && req.query.title.trim()
+    ? req.query.title.trim()
+    : "The Hobbit";
+
+  try {
+    const payload = await getJson(`https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=1`);
+    const match = payload.docs && payload.docs[0] ? payload.docs[0] : null;
+
+    res.json({
+      source: "openlibrary",
+      query: title,
+      found: Boolean(match),
+      book: match
+        ? {
+            title: match.title || null,
+            author: Array.isArray(match.author_name) ? match.author_name[0] || null : null,
+            firstPublishedYear: match.first_publish_year || null,
+            isbn: Array.isArray(match.isbn) ? match.isbn[0] || null : null,
+          }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use("/api/auth", authRoutes);
