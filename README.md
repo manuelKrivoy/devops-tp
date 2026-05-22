@@ -1,4 +1,4 @@
-# Book Library API
+# API Book Library
 
 Trabajo practico para la materia **DevOps** de la **Universidad de Palermo (UP)**. El proyecto consiste en una **API REST** para gestion de libros, con **CI/CD automatizado**, **dockerizacion**, publicacion de imagen Docker y **deploy en Render** usando **GitHub Actions**.
 
@@ -158,15 +158,15 @@ Para correr el proyecto localmente o con Docker Compose se usan variables en el 
 
 Variables actuales:
 
-| Variable | Descripcion | Valor por defecto |
-| --- | --- | --- |
-| `PORT` | Puerto donde corre la API | `3000` |
-| `JWT_SECRET` | Secreto para firmar tokens JWT | si no existe, la app genera uno aleatorio |
-| `JWT_EXPIRES_IN` | Tiempo de expiracion del token | `1h` |
-| `SENTRY_DSN` | DSN del proyecto en Sentry. Si esta vacio, Sentry queda deshabilitado | vacio |
-| `SENTRY_ENVIRONMENT` | Ambiente reportado a Sentry | `NODE_ENV` o `production` |
-| `SENTRY_RELEASE` | Version/release reportada a Sentry | `RENDER_GIT_COMMIT` o `dev` |
-| `SENTRY_TRACES_SAMPLE_RATE` | Porcentaje de trazas enviadas a Sentry | `1` |
+| Variable                    | Descripcion                                                           | Valor por defecto                         |
+| --------------------------- | --------------------------------------------------------------------- | ----------------------------------------- |
+| `PORT`                      | Puerto donde corre la API                                             | `3000`                                    |
+| `JWT_SECRET`                | Secreto para firmar tokens JWT                                        | si no existe, la app genera uno aleatorio |
+| `JWT_EXPIRES_IN`            | Tiempo de expiracion del token                                        | `1h`                                      |
+| `SENTRY_DSN`                | DSN del proyecto en Sentry. Si esta vacio, Sentry queda deshabilitado | vacio                                     |
+| `SENTRY_ENVIRONMENT`        | Ambiente reportado a Sentry                                           | `NODE_ENV` o `production`                 |
+| `SENTRY_RELEASE`            | Version/release reportada a Sentry                                    | `RENDER_GIT_COMMIT` o `dev`               |
+| `SENTRY_TRACES_SAMPLE_RATE` | Porcentaje de trazas enviadas a Sentry                                | `1`                                       |
 
 Ejemplo:
 
