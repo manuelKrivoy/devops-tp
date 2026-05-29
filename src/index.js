@@ -89,7 +89,7 @@ app.use(limiter);
 
 // --- Rutas ---
 app.get("/", (_req, res) => {
-  res.json({ status: "API Corriendo" });
+  res.json({ status: "API is running." });
 });
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -98,9 +98,7 @@ app.get("/api/traffic/error", (_req, _res, next) => {
   next(new Error("Simulated Sentry traffic error"));
 });
 app.get("/api/traffic/external-book", async (req, res, next) => {
-  const title = typeof req.query.title === "string" && req.query.title.trim()
-    ? req.query.title.trim()
-    : "The Hobbit";
+  const title = typeof req.query.title === "string" && req.query.title.trim() ? req.query.title.trim() : "The Hobbit";
 
   try {
     const payload = await getJson(`https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=1`);
