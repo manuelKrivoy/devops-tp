@@ -23,7 +23,7 @@ Este TP busca mostrar un flujo DevOps completo sobre una aplicacion Node.js:
 - **Docker Compose** para entorno local
 - **GitHub Actions** para CI/CD
 - **Render** para despliegue
-- **Sentry** para monitoreo de errores y respuestas exitosas
+- **Sentry** para monitoreo de errores y respuestas HTTP
 
 ## Docker y CI/CD
 
@@ -167,6 +167,10 @@ Variables actuales:
 | `SENTRY_ENVIRONMENT`        | Ambiente reportado a Sentry                                           | `NODE_ENV` o `production`                 |
 | `SENTRY_RELEASE`            | Version/release reportada a Sentry                                    | `RENDER_GIT_COMMIT` o `dev`               |
 | `SENTRY_TRACES_SAMPLE_RATE` | Porcentaje de trazas enviadas a Sentry                                | `1`                                       |
+| `API_URL`                   | URL base usada por el script de trafico                               | `http://localhost:3000`                   |
+| `REQUESTS_PER_MINUTE`       | Maximo de requests por minuto del script de trafico                   | `5`                                       |
+| `TOTAL_REQUESTS`            | Cantidad total de requests del script de trafico                      | `10`                                      |
+| `REQUEST_TIMEOUT_MS`        | Timeout por request del script de trafico                             | `10000`                                   |
 
 Ejemplo:
 
@@ -178,6 +182,10 @@ SENTRY_DSN=
 SENTRY_ENVIRONMENT=development
 SENTRY_RELEASE=dev
 SENTRY_TRACES_SAMPLE_RATE=1
+API_URL=http://localhost:3000
+REQUESTS_PER_MINUTE=5
+TOTAL_REQUESTS=10
+REQUEST_TIMEOUT_MS=10000
 ```
 
 ### Variables en GitHub Actions
@@ -378,8 +386,10 @@ El proyecto usa **Sentry** para observar el comportamiento de la API en producci
 - `src/config/instrument.js` inicializa Sentry antes de crear la app Express.
 - La inicializacion usa `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` y `SENTRY_TRACES_SAMPLE_RATE`.
 - Si `SENTRY_DSN` no esta definido, Sentry queda deshabilitado y la API funciona normalmente.
-- El error handler global captura excepciones con `Sentry.captureException(err)`.
-- Un middleware global escucha el evento `finish` de cada respuesta HTTP y registra en Sentry los status exitosos `2xx` con nivel `info`.
+- El error handler global captura excepciones con `Sentry.captureException(err)` y devuelve `requestId` y `sentryEventId` en respuestas `500`.
+- Un middleware global escucha el evento `finish` de cada respuesta HTTP y registra outcomes claros en Sentry.
+- Las requests `HEAD` no generan evento manual de Sentry para evitar el doble log al consultar `/`.
+- Los campos sensibles como `password`, `token`, `authorization`, `jwt` y `secret` se filtran antes de enviarse como contexto.
 
 ### Que registra
 
@@ -387,20 +397,23 @@ Para errores:
 
 - excepcion capturada
 - metodo HTTP
-- path solicitado
+- ruta y URL solicitada
 - parametros y query string
-- body recibido por la API
+- body recibido por la API con campos sensibles filtrados
+- `requestId` para correlacionar respuesta, consola y evento de Sentry
 
-Para respuestas exitosas:
+Para respuestas HTTP:
 
-- mensaje `Successful HTTP response: <METODO> <RUTA> <STATUS>`
-- nivel `info`
+- mensaje `HTTP <outcome>: <METODO> <RUTA> -> <STATUS> (<DURACION>ms)`
+- outcome `success`, `redirect`, `client_error` o `server_error`
+- nivel `info`, `warning` o `error` segun el status
 - metodo HTTP
 - status code
-- path solicitado
+- ruta solicitada
+- duracion aproximada en milisegundos
 - parametros y query string
 
-Esto permite ver tanto trafico con error, por ejemplo `GET /api/traffic/error`, como trafico exitoso, por ejemplo `GET /api/health` o cualquier endpoint que responda `2xx`.
+Esto permite ver trafico exitoso, errores de cliente `4xx`, errores de servidor `5xx` y fallas reales capturadas como excepciones.
 
 ### Como probarlo
 
@@ -412,6 +425,31 @@ curl http://localhost:3000/api/traffic/error
 ```
 
 En Sentry deberia verse un evento `info` para la respuesta exitosa y un evento de error para la excepcion simulada.
+
+### Script de trafico para Sentry
+
+El proyecto incluye `scripts/api-traffic.js` para generar requests controladas contra la API y validar que queden registradas en Sentry.
+
+Uso local:
+
+```bash
+npm run traffic:sentry
+```
+
+Variables configurables:
+
+```bash
+API_URL=http://localhost:3000 REQUESTS_PER_MINUTE=5 TOTAL_REQUESTS=10 npm run traffic:sentry
+```
+
+Valores por defecto:
+
+- `API_URL=http://localhost:3000`
+- `REQUESTS_PER_MINUTE=5`
+- `TOTAL_REQUESTS=10`
+- `REQUEST_TIMEOUT_MS=10000`
+
+El script alterna endpoints `2xx`, `4xx` y `5xx`, incluyendo `/`, `/api/health`, `/api/books`, `/api/no-existe`, `/api/traffic/error`, `/api/traffic/external-book`, registro, login y creacion de un libro. Con el limite por defecto consume como maximo 5 requests por minuto y 10 requests totales.
 
 ## Testing
 
