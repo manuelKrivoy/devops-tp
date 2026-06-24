@@ -1,5 +1,6 @@
 require("./config/instrument");
 
+const { randomUUID } = require("node:crypto");
 const https = require("node:https");
 const express = require("express");
 const helmet = require("helmet");
@@ -8,6 +9,64 @@ const Sentry = require("@sentry/node");
 const config = require("./config");
 const authRoutes = require("./routes/auth");
 const bookRoutes = require("./routes/books");
+
+const SENSITIVE_FIELDS = new Set(["password", "token", "authorization", "jwt", "secret"]);
+
+function sanitizeForMonitoring(value) {
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(sanitizeForMonitoring);
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      SENSITIVE_FIELDS.has(key.toLowerCase()) ? "[Filtered]" : sanitizeForMonitoring(item),
+    ]),
+  );
+}
+
+function getRequestPath(req) {
+  return req.route && req.route.path ? `${req.baseUrl}${req.route.path}` : req.originalUrl;
+}
+
+function getOutcome(statusCode) {
+  if (statusCode >= 500) return "server_error";
+  if (statusCode >= 400) return "client_error";
+  if (statusCode >= 300) return "redirect";
+  return "success";
+}
+
+function setHttpMonitoringScope(scope, req, res, startedAt) {
+  const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+  const outcome = getOutcome(res.statusCode);
+  const route = getRequestPath(req);
+
+  scope.setLevel(outcome === "server_error" ? "error" : outcome === "client_error" ? "warning" : "info");
+  scope.setTag("layer", "express");
+  scope.setTag("http.method", req.method);
+  scope.setTag("http.route", route);
+  scope.setTag("http.status_code", String(res.statusCode));
+  scope.setTag("http.outcome", outcome);
+  scope.setContext("request", {
+    id: req.monitoringId,
+    method: req.method,
+    url: req.originalUrl,
+    route,
+    params: sanitizeForMonitoring(req.params),
+    query: sanitizeForMonitoring(req.query),
+    body: sanitizeForMonitoring(req.body),
+  });
+  scope.setContext("response", {
+    statusCode: res.statusCode,
+    durationMs: Math.round(durationMs),
+  });
+
+  return { outcome, route, durationMs };
+}
 
 function getJson(url) {
   return new Promise((resolve, reject) => {
@@ -50,27 +109,24 @@ app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 
 app.use((req, res, next) => {
+  const startedAt = process.hrtime.bigint();
+  req.monitoringId = randomUUID();
+
   res.on("finish", () => {
-    if (res.statusCode < 200 || res.statusCode >= 300) {
+    if (req.method === "HEAD") {
       return;
     }
 
     Sentry.withScope((scope) => {
-      scope.setLevel("info");
-      scope.setTag("layer", "express");
-      scope.setTag("http.method", req.method);
-      scope.setTag("http.status_code", String(res.statusCode));
-      scope.setContext("request", {
-        method: req.method,
-        path: req.originalUrl,
-        params: req.params,
-        query: req.query,
-      });
-      scope.setContext("response", {
-        statusCode: res.statusCode,
-      });
+      const { outcome, route, durationMs } = setHttpMonitoringScope(scope, req, res, startedAt);
 
-      Sentry.captureMessage(`Successful HTTP response: ${req.method} ${req.originalUrl} ${res.statusCode}`);
+      if (outcome === "server_error" && res.locals.sentryErrorCaptured) {
+        return;
+      }
+
+      Sentry.captureMessage(
+        `HTTP ${outcome}: ${req.method} ${route} -> ${res.statusCode} (${Math.round(durationMs)}ms)`,
+      );
     });
   });
 
@@ -132,20 +188,36 @@ app.use((_req, res) => {
 
 // Error handler global
 app.use((err, req, res, _next) => {
+  let eventId;
+
   Sentry.withScope((scope) => {
+    scope.setLevel("error");
     scope.setTag("layer", "express");
+    scope.setTag("http.method", req.method);
+    scope.setTag("http.status_code", "500");
+    scope.setTag("http.outcome", "server_error");
     scope.setContext("request", {
+      id: req.monitoringId,
       method: req.method,
-      path: req.originalUrl,
-      params: req.params,
-      query: req.query,
-      body: req.body,
+      url: req.originalUrl,
+      route: getRequestPath(req),
+      params: sanitizeForMonitoring(req.params),
+      query: sanitizeForMonitoring(req.query),
+      body: sanitizeForMonitoring(req.body),
     });
-    Sentry.captureException(err);
+    eventId = Sentry.captureException(err);
   });
 
-  console.error(err.stack);
-  res.status(500).json({ error: "Error interno del servidor" });
+  res.locals.sentryErrorCaptured = true;
+  console.error({
+    message: err.message,
+    stack: err.stack,
+    method: req.method,
+    url: req.originalUrl,
+    requestId: req.monitoringId,
+    sentryEventId: eventId,
+  });
+  res.status(500).json({ error: "Error interno del servidor", requestId: req.monitoringId, sentryEventId: eventId });
 });
 
 if (require.main === module) {

@@ -95,7 +95,7 @@ test("GET /api/health returns ok", async () => {
   }
 });
 
-test("captures successful responses in Sentry", async () => {
+test("captures HTTP outcomes in Sentry", async () => {
   const server = await listen(app);
   const originalCaptureMessage = Sentry.captureMessage;
   const messages = [];
@@ -108,7 +108,52 @@ test("captures successful responses in Sentry", async () => {
     const response = await request(server, "/api/health");
 
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(messages, ["Successful HTTP response: GET /api/health 200"]);
+    assert.equal(messages.length, 1);
+    assert.match(messages[0], /^HTTP success: GET \/api\/health -> 200 \(\d+ms\)$/);
+  } finally {
+    Sentry.captureMessage = originalCaptureMessage;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("does not capture HEAD root checks in Sentry", async () => {
+  const server = await listen(app);
+  const originalCaptureMessage = Sentry.captureMessage;
+  const messages = [];
+
+  Sentry.captureMessage = (message) => {
+    messages.push(message);
+  };
+
+  try {
+    const response = await makeRequest(server, {
+      path: "/",
+      method: "HEAD",
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(messages, []);
+  } finally {
+    Sentry.captureMessage = originalCaptureMessage;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("captures client errors in Sentry", async () => {
+  const server = await listen(app);
+  const originalCaptureMessage = Sentry.captureMessage;
+  const messages = [];
+
+  Sentry.captureMessage = (message) => {
+    messages.push(message);
+  };
+
+  try {
+    const response = await request(server, "/api/no-existe");
+
+    assert.equal(response.statusCode, 404);
+    assert.equal(messages.length, 1);
+    assert.match(messages[0], /^HTTP client_error: GET \/api\/no-existe -> 404 \(\d+ms\)$/);
   } finally {
     Sentry.captureMessage = originalCaptureMessage;
     await new Promise((resolve) => server.close(resolve));
