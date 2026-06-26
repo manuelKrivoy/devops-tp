@@ -99,9 +99,11 @@ test("captures HTTP outcomes in Sentry", async () => {
   const server = await listen(app);
   const originalCaptureMessage = Sentry.captureMessage;
   const messages = [];
+  const levels = [];
 
-  Sentry.captureMessage = (message) => {
+  Sentry.captureMessage = (message, level) => {
     messages.push(message);
+    levels.push(level);
   };
 
   try {
@@ -110,6 +112,7 @@ test("captures HTTP outcomes in Sentry", async () => {
     assert.equal(response.statusCode, 200);
     assert.equal(messages.length, 1);
     assert.match(messages[0], /^HTTP success: GET \/api\/health -> 200 \(\d+ms\)$/);
+    assert.equal(levels[0], "info");
   } finally {
     Sentry.captureMessage = originalCaptureMessage;
     await new Promise((resolve) => server.close(resolve));
@@ -143,9 +146,11 @@ test("captures client errors in Sentry", async () => {
   const server = await listen(app);
   const originalCaptureMessage = Sentry.captureMessage;
   const messages = [];
+  const levels = [];
 
-  Sentry.captureMessage = (message) => {
+  Sentry.captureMessage = (message, level) => {
     messages.push(message);
+    levels.push(level);
   };
 
   try {
@@ -154,6 +159,31 @@ test("captures client errors in Sentry", async () => {
     assert.equal(response.statusCode, 404);
     assert.equal(messages.length, 1);
     assert.match(messages[0], /^HTTP client_error: GET \/api\/no-existe -> 404 \(\d+ms\)$/);
+    assert.equal(levels[0], "warning");
+  } finally {
+    Sentry.captureMessage = originalCaptureMessage;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("captures redirects in Sentry", async () => {
+  const server = await listen(app);
+  const originalCaptureMessage = Sentry.captureMessage;
+  const messages = [];
+  const levels = [];
+
+  Sentry.captureMessage = (message, level) => {
+    messages.push(message);
+    levels.push(level);
+  };
+
+  try {
+    const response = await request(server, "/api/traffic/redirect");
+
+    assert.equal(response.statusCode, 302);
+    assert.equal(messages.length, 1);
+    assert.match(messages[0], /^HTTP redirect: GET \/api\/traffic\/redirect -> 302 \(\d+ms\)$/);
+    assert.equal(levels[0], "warning");
   } finally {
     Sentry.captureMessage = originalCaptureMessage;
     await new Promise((resolve) => server.close(resolve));

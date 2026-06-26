@@ -40,12 +40,18 @@ function getOutcome(statusCode) {
   return "success";
 }
 
+function getSentryLevel(outcome) {
+  if (outcome === "server_error") return "error";
+  if (outcome === "client_error" || outcome === "redirect") return "warning";
+  return "info";
+}
+
 function setHttpMonitoringScope(scope, req, res, startedAt) {
   const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
   const outcome = getOutcome(res.statusCode);
   const route = getRequestPath(req);
 
-  scope.setLevel(outcome === "server_error" ? "error" : outcome === "client_error" ? "warning" : "info");
+  scope.setLevel(getSentryLevel(outcome));
   scope.setTag("layer", "express");
   scope.setTag("http.method", req.method);
   scope.setTag("http.route", route);
@@ -126,6 +132,7 @@ app.use((req, res, next) => {
 
       Sentry.captureMessage(
         `HTTP ${outcome}: ${req.method} ${route} -> ${res.statusCode} (${Math.round(durationMs)}ms)`,
+        getSentryLevel(outcome),
       );
     });
   });
@@ -152,6 +159,9 @@ app.get("/api/health", (_req, res) => {
 });
 app.get("/api/traffic/error", (_req, _res, next) => {
   next(new Error("Simulated Sentry traffic error"));
+});
+app.get("/api/traffic/redirect", (_req, res) => {
+  res.redirect(302, "/api/health");
 });
 app.get("/api/traffic/external-book", async (req, res, next) => {
   const title = typeof req.query.title === "string" && req.query.title.trim() ? req.query.title.trim() : "The Hobbit";

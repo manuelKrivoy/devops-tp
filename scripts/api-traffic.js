@@ -1,6 +1,10 @@
 const http = require("node:http");
 const https = require("node:https");
 const { randomUUID } = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+
+loadEnvFile(path.resolve(__dirname, "..", ".env"));
 
 const API_URL = process.env.API_URL || "https://book-library-api-latest.onrender.com";
 const REQUESTS_PER_MINUTE = parsePositiveInteger(process.env.REQUESTS_PER_MINUTE, 10);
@@ -23,6 +27,7 @@ const scenarios = [
   { name: "books-list", method: "GET", path: "/api/books" },
   { name: "not-found", method: "GET", path: "/api/no-existe" },
   { name: "missing-auth", method: "POST", path: "/api/books", body: { title: "Sentry Test", author: "Script" } },
+  { name: "redirect", method: "GET", path: "/api/traffic/redirect" },
   { name: "simulated-error", method: "GET", path: "/api/traffic/error" },
   {
     name: "external-book",
@@ -69,6 +74,41 @@ const scenarios = [
 function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf("=");
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+
+    if (!key || process.env[key] !== undefined) {
+      continue;
+    }
+
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
 }
 
 function wait(ms) {
