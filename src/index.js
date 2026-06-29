@@ -159,7 +159,7 @@ app.use(limiter);
 
 // --- Rutas ---
 app.get("/", (_req, res) => {
-  res.json({ status: "API is running." });
+  res.json({ status: "La API está corriendo..." });
 });
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

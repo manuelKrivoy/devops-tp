@@ -266,121 +266,34 @@ docker compose down
 curl http://localhost:3000/api/health
 ```
 
-## Documentacion Swagger
+## Documentacion de endpoints
 
-La API expone documentacion interactiva con Swagger UI:
+La documentacion completa de endpoints, parametros, autenticacion, cuerpos de request y respuestas esta disponible en Swagger UI.
+
+En local:
 
 ```text
 http://localhost:3000/api-docs
 ```
 
-Tambien se puede consultar la especificacion OpenAPI en JSON:
+En produccion:
+
+```text
+https://book-library-api-latest.onrender.com/api-docs
+```
+
+Tambien se puede consultar la especificacion OpenAPI en JSON.
+
+En local:
 
 ```text
 http://localhost:3000/api-docs.json
 ```
 
-## Endpoints
+En produccion:
 
-### Health Check
-
-| Método | Ruta          | Auth | Descripción         |
-| ------ | ------------- | ---- | ------------------- |
-| GET    | `/api/health` | No   | Estado del servidor |
-
-### Autenticación
-
-| Método | Ruta                 | Auth | Descripción       |
-| ------ | -------------------- | ---- | ----------------- |
-| POST   | `/api/auth/register` | No   | Registrar usuario |
-| POST   | `/api/auth/login`    | No   | Iniciar sesión    |
-
-### Libros
-
-| Método | Ruta             | Auth | Descripción                        |
-| ------ | ---------------- | ---- | ---------------------------------- |
-| GET    | `/api/books`     | No   | Listar todos los libros            |
-| GET    | `/api/books/:id` | No   | Obtener un libro por ID            |
-| POST   | `/api/books`     | JWT  | Crear un libro                     |
-| PUT    | `/api/books/:id` | JWT  | Actualizar un libro (solo creador) |
-| DELETE | `/api/books/:id` | JWT  | Eliminar un libro (solo creador)   |
-
-## Ejemplos de uso
-
-### Registrar usuario
-
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Juan Pérez",
-    "email": "juan@ejemplo.com",
-    "password": "miPassword123"
-  }'
-```
-
-**Respuesta (201):**
-
-```json
-{
-  "message": "Usuario registrado correctamente",
-  "user": {
-    "id": "uuid-del-usuario",
-    "email": "juan@ejemplo.com",
-    "name": "Juan Pérez"
-  },
-  "token": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
-### Iniciar sesión
-
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "juan@ejemplo.com",
-    "password": "miPassword123"
-  }'
-```
-
-### Crear un libro (requiere JWT)
-
-```bash
-curl -X POST http://localhost:3000/api/books \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <tu-token-jwt>" \
-  -d '{
-    "title": "Cien años de soledad",
-    "author": "Gabriel García Márquez",
-    "year": 1967,
-    "genre": "Realismo mágico",
-    "isbn": "978-0-06-088328-7"
-  }'
-```
-
-### Listar libros
-
-```bash
-curl http://localhost:3000/api/books
-```
-
-### Actualizar un libro (solo el creador)
-
-```bash
-curl -X PUT http://localhost:3000/api/books/<id-del-libro> \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <tu-token-jwt>" \
-  -d '{
-    "year": 1970
-  }'
-```
-
-### Eliminar un libro (solo el creador)
-
-```bash
-curl -X DELETE http://localhost:3000/api/books/<id-del-libro> \
-  -H "Authorization: Bearer <tu-token-jwt>"
+```text
+https://book-library-api-latest.onrender.com/api-docs.json
 ```
 
 ## Seguridad
