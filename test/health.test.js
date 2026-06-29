@@ -95,6 +95,35 @@ test("GET /api/health returns ok", async () => {
   }
 });
 
+test("GET /api-docs.json returns OpenAPI document", async () => {
+  const server = await listen(app);
+
+  try {
+    const response = await request(server, "/api-docs.json");
+    assert.equal(response.statusCode, 200);
+
+    const payload = JSON.parse(response.body);
+    assert.equal(payload.openapi, "3.0.3");
+    assert.equal(payload.info.title, "Book Library API");
+    assert.ok(payload.paths["/api/books"]);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("GET /api-docs serves Swagger UI", async () => {
+  const server = await listen(app);
+
+  try {
+    const response = await request(server, "/api-docs/");
+    assert.equal(response.statusCode, 200);
+    assert.match(response.headers["content-type"], /text\/html/);
+    assert.match(response.body, /Swagger UI/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("captures HTTP outcomes in Sentry", async () => {
   const server = await listen(app);
   const originalCaptureMessage = Sentry.captureMessage;

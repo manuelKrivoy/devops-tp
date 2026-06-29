@@ -5,8 +5,10 @@ const https = require("node:https");
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const swaggerUi = require("swagger-ui-express");
 const Sentry = require("@sentry/node");
 const config = require("./config");
+const openApiDocument = require("./swagger");
 const authRoutes = require("./routes/auth");
 const bookRoutes = require("./routes/books");
 
@@ -109,6 +111,11 @@ function getJson(url) {
 }
 
 const app = express();
+
+app.get("/api-docs.json", (_req, res) => {
+  res.json(openApiDocument);
+});
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 // --- Seguridad ---
 app.use(helmet());

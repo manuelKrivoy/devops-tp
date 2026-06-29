@@ -19,6 +19,7 @@ Este TP busca mostrar un flujo DevOps completo sobre una aplicacion Node.js:
 - **bcrypt** para hasheo de contrasenas
 - **Helmet** para cabeceras HTTP seguras
 - **express-rate-limit** para proteccion contra abuso
+- **Swagger / OpenAPI** para documentacion interactiva
 - **Docker** con multi-stage build
 - **Docker Compose** para entorno local
 - **GitHub Actions** para CI/CD
@@ -140,6 +141,7 @@ Este workflow cubre la parte de **CD** del proyecto.
 │   ├── routes/
 │   │   ├── auth.js                 # Rutas de autenticacion
 │   │   └── books.js                # Rutas de libros
+│   ├── swagger.js                  # Especificacion OpenAPI
 │   └── index.js                    # Punto de entrada del servidor
 ├── .dockerignore                   # Archivos excluidos del build
 ├── .env                            # Variables locales
@@ -262,6 +264,20 @@ docker compose down
 
 ```bash
 curl http://localhost:3000/api/health
+```
+
+## Documentacion Swagger
+
+La API expone documentacion interactiva con Swagger UI:
+
+```text
+http://localhost:3000/api-docs
+```
+
+Tambien se puede consultar la especificacion OpenAPI en JSON:
+
+```text
+http://localhost:3000/api-docs.json
 ```
 
 ## Endpoints
